@@ -1,0 +1,14 @@
+{
+  "name": "kildongmu_core",
+  "version": "0.1.0",
+  "files": [
+    "kildongmu_core_bg.wasm",
+    "kildongmu_core.js",
+    "kildongmu_core.d.ts"
+  ],
+  "module": "kildongmu_core.js",
+  "types": "kildongmu_core.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
