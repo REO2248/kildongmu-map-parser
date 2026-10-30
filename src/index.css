@@ -1,0 +1,39 @@
+@import "tailwindcss";
+@import "maplibre-gl/dist/maplibre-gl.css";
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: #0b0d10;
+}
+
+body {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  -webkit-font-smoothing: antialiased;
+}
+
+.maplibregl-ctrl-attrib,
+.maplibregl-ctrl-bottom-left {
+  display: none !important;
+}
+
+.panel {
+  background: color-mix(in srgb, #0b0d10 82%, transparent);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgb(255 255 255 / 0.08);
+}
+
+.scroll-thin::-webkit-scrollbar {
+  width: 6px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: rgb(255 255 255 / 0.15);
+  border-radius: 3px;
+}
