@@ -21,9 +21,11 @@ export async function detectFrameDelta(db: Database, cityBounds: Bounds): Promis
   const [[west, south], [east, north]] = cityBounds;
   if (!(east > west && north > south)) return null;
 
+  let sawRect = false;
   for (const zoom of ZOOMS) {
     const rect = await readRectBounds(db, zoom);
     if (!rect) continue;
+    sawRect = true;
     const dlngA = rect.west - west;
     const dlngB = rect.east - east;
     const dlatA = rect.south - south;
@@ -36,6 +38,11 @@ export async function detectFrameDelta(db: Database, cityBounds: Bounds): Promis
     return negligible(delta) ? null : delta;
   }
 
+  // A rect that exists but disagrees with CITYINFO means the two rectangles
+  // have different extents (CITYINFO is not exact), not that the frames are
+  // apart. The metadata bounds are snapped to tile edges, so using them here
+  // would shift aligned overlays by a hundred-odd metres.
+  if (sawRect) return null;
   const meta = readMetadataDelta(db, cityBounds);
   return meta && !negligible(meta) ? meta : null;
 }
