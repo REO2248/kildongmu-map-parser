@@ -1,6 +1,6 @@
 import { decode_geometry, initWasm, Package } from './wasm';
 import { loadSqlJs, type Database } from './sqlite';
-import { buildStyle, fallbackStyle } from './style';
+import { buildStyle, fallbackStyle, inferredStyle } from './style';
 import { detectFrameDelta, type FrameDelta } from './frame';
 
 export const ITERATIONS = 12345;
@@ -92,8 +92,15 @@ export async function loadCity(
   let delta: FrameDelta | null = null;
   if (pkg.has('/map.db')) {
     mapDb = new sql.Database(pkg.map_db(ITERATIONS));
+    const zooms = readZooms(mapDb);
     const rawStyle = readStyle(mapDb);
-    if (rawStyle) style = buildStyle(rawStyle, base, readZooms(mapDb), true);
+    if (rawStyle) style = buildStyle(rawStyle, base, zooms, true);
+    else {
+      const vectorLayers = readVectorLayers(mapDb);
+      style = vectorLayers.length
+        ? inferredStyle(base, zooms, vectorLayers)
+        : fallbackStyle(base);
+    }
     delta = await detectFrameDelta(mapDb, validBounds(infoBounds) ? infoBounds : city.bounds);
   }
   pkg.free();
@@ -237,15 +244,33 @@ function translate(coords: any, delta: FrameDelta): any {
 }
 
 function readStyle(db: Database): any | null {
-  const preferred = db.exec('select style from styles where id = 2');
-  const rows = preferred.length ? preferred : db.exec('select style from styles order by id limit 1');
-  if (!rows.length || !rows[0].values.length) return null;
-  const raw = rows[0].values[0][0];
-  if (typeof raw !== 'string') return null;
   try {
-    return JSON.parse(raw);
+    const preferred = db.exec('select style from styles where id = 2');
+    const rows = preferred.length ? preferred : db.exec('select style from styles order by id limit 1');
+    if (!rows.length || !rows[0].values.length) return null;
+    const raw = rows[0].values[0][0];
+    if (typeof raw !== 'string') return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
   } catch {
+    // Newer packages ship overlay-only MBTiles with no styles table.
     return null;
+  }
+}
+
+function readVectorLayers(db: Database): string[] {
+  try {
+    const res = db.exec("select value from metadata where name = 'json'");
+    if (!res.length || !res[0].values.length) return [];
+    const meta = JSON.parse(String(res[0].values[0][0]));
+    return (meta.vector_layers ?? [])
+      .map((layer: any) => layer?.id)
+      .filter((id: unknown): id is string => typeof id === 'string');
+  } catch {
+    return [];
   }
 }
 
